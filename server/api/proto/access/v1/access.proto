@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package access.v1;
+
+option go_package = "github.com/ffakira/cloudiam/server/gen/access/v1;accessv1";
+
+service AccessService {
+  rpc RequestAccess(RequestAccessRequest) returns (RequestAccessResponse);
+}
+
+message RequestAccessRequest {
+  string principal = 1;
+  string target = 2;
+  int32 duration_seconds = 3;
+}
+
+message RequestAccessResponse {
+  string access_key_id = 1;
+  string secret_access_key = 2;
+  string session_token = 3;
+  string expires_at = 4;
+  string status = 5;
+  int64 access_request_id = 6;
+  string approval_expires_at = 7;
+}

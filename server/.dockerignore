@@ -1,0 +1,10 @@
+.git
+.aws
+.env
+.env.*
+bin/
+dist/
+coverage.out
+tmp/
+*.test
+*.prof

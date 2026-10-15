@@ -1,0 +1,84 @@
+services:
+  cloudiam-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: cloudiam-server:local
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AWS_PROFILE: ${AWS_PROFILE:-}
+      AWS_SDK_LOAD_CONFIG: "1"
+      AWS_CONFIG_FILE: /aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /aws/credentials
+      CLOUDIAM_AWS_ACCOUNT_ID: ${CLOUDIAM_AWS_ACCOUNT_ID:-}
+      CLOUDIAM_DATABASE_URL: postgres://cloudiam:cloudiam@postgres:5432/cloudiam?sslmode=disable
+      CLOUDIAM_AUTH_WORKSPACE: ${CLOUDIAM_AUTH_WORKSPACE:-local}
+      CLOUDIAM_AUTH_ENDPOINT: ${CLOUDIAM_AUTH_ENDPOINT:-cloudiam.internal.local}
+      CLOUDIAM_AUTH_VERIFICATION_URI: ${CLOUDIAM_SERVICE_AUTH_VERIFICATION_URI:-http://127.0.0.1:18080/device}
+      CLOUDIAM_HTTP_ADDR: 0.0.0.0:8080
+      CLOUDIAM_DEPLOYMENT_ENV: ${CLOUDIAM_DEPLOYMENT_ENV:-development}
+      CLOUDIAM_CONSOLE_SEED_USERNAME: ${CLOUDIAM_CONSOLE_SEED_USERNAME:-}
+      CLOUDIAM_CONSOLE_SEED_PASSWORD: ${CLOUDIAM_CONSOLE_SEED_PASSWORD:-}
+      CLOUDIAM_CONSOLE_JWT_SECRET: ${CLOUDIAM_CONSOLE_JWT_SECRET:-}
+      CLOUDIAM_CONSOLE_JWT_TTL: ${CLOUDIAM_CONSOLE_JWT_TTL:-8h}
+      CLOUDIAM_CONSOLE_COOKIE_SECURE: ${CLOUDIAM_CONSOLE_COOKIE_SECURE:-false}
+      CLOUDIAM_ALLOW_CONSOLE_SEED_IN_PRODUCTION: ${CLOUDIAM_ALLOW_CONSOLE_SEED_IN_PRODUCTION:-false}
+      CLOUDIAM_ALLOW_INSECURE_DATABASE_IN_PRODUCTION: ${CLOUDIAM_ALLOW_INSECURE_DATABASE_IN_PRODUCTION:-false}
+      CLOUDIAM_REDIS_URL: redis://redis:6379/0
+      HOME: /home/nonroot
+    ports:
+      - "${CLOUDIAM_SERVICE_GRPC_PORT:-50051}:50051"
+      - "${CLOUDIAM_SERVICE_HTTP_PORT:-18080}:8080"
+    volumes:
+      - ./server/configs/cloudiam.yaml:/etc/cloudiam/cloudiam.yaml:ro
+      - ${HOME}/.aws:/aws:ro
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: cloudiam
+      POSTGRES_USER: cloudiam
+      POSTGRES_PASSWORD: cloudiam
+    ports:
+      - "6000:5432"
+    volumes:
+      - cloudiam_postgres_18_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudiam -d cloudiam"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate:v4.17.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./server/migrations:/migrations:ro
+
+volumes:
+  cloudiam_postgres_18_data:

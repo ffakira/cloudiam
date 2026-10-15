@@ -1,0 +1,39 @@
+version: v1
+tenant: "<COMPANY_UUID>"
+
+serve:
+  grpc:
+    addr: 127.0.0.1:50051
+
+providers:
+  aws:
+    region: us-east-1
+    accounts:
+      sandbox:
+        id: "${CLOUDIAM_AWS_ACCOUNT_ID}"
+        roles:
+          readonly:
+            arn: "arn:aws:iam::${CLOUDIAM_AWS_ACCOUNT_ID}:role/jit/readonly"
+
+principals:
+  users:
+    akira:
+      groups:
+        - developers
+
+access:
+  targets:
+    aws-sandbox-readonly:
+      provider: aws
+      account: sandbox
+      role: readonly
+      default_duration: 15m
+      max_duration: 1h
+      approval_required: true
+
+  policies:
+    - name: developers-sandbox-readonly
+      groups:
+        - developers
+      targets:
+        - aws-sandbox-readonly

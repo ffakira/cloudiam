@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/ffakira/cloudiam/server/gen/auth/v1;authv1";
+
+service AuthService {
+  rpc StartDeviceLogin(StartDeviceLoginRequest) returns (StartDeviceLoginResponse);
+  rpc ApproveDeviceLogin(ApproveDeviceLoginRequest) returns (ApproveDeviceLoginResponse);
+  rpc ExchangeDeviceCode(ExchangeDeviceCodeRequest) returns (ExchangeDeviceCodeResponse);
+}
+
+message StartDeviceLoginRequest {}
+
+message StartDeviceLoginResponse {
+  string device_code = 1;
+  string user_code = 2;
+  string verification_uri = 3;
+  string expires_at = 4;
+  int32 interval_seconds = 5;
+}
+
+message ApproveDeviceLoginRequest {
+  string user_code = 1;
+  string principal = 2;
+}
+
+message ApproveDeviceLoginResponse {}
+
+message ExchangeDeviceCodeRequest {
+  string device_code = 1;
+}
+
+message ExchangeDeviceCodeResponse {
+  string access_token = 1;
+  string workspace = 2;
+  string principal = 3;
+  string endpoint = 4;
+  string expires_at = 5;
+}
